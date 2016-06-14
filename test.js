@@ -19,6 +19,24 @@ it('should rev files', function (cb) {
 	}));
 });
 
+it('should rev files with prefix and suffix', function (cb) {
+	var stream = rev({
+		hashPre: 'pre.',
+		hashSfx: '.sfx'
+	});
+
+	stream.on('data', function (file) {
+		assert.equal(file.path, 'unicorn-pre.d41d8cd98f.sfx.css');
+		assert.equal(file.revOrigPath, 'unicorn.css');
+		cb();
+	});
+
+	stream.write(new gutil.File({
+		path: 'unicorn.css',
+		contents: new Buffer('')
+	}));
+});
+
 it('should add the revision hash before the first `.` in the filename', function (cb) {
 	var stream = rev();
 
@@ -288,6 +306,30 @@ it('should handle unparseable sourcemaps correctly', function (cb) {
 	stream.on('data', function (file) {
 		if (path.extname(file.path) === '.map') {
 			assert.equal(file.path, 'pastissada-d41d8cd98f.css.map');
+			cb();
+		}
+	});
+
+	stream.write(new gutil.File({
+		path: 'pastissada.css',
+		contents: new Buffer('')
+	}));
+
+	stream.end(new gutil.File({
+		path: 'pastissada.css.map',
+		contents: new Buffer('Wait a minute, this is invalid JSON!')
+	}));
+});
+
+it('should handle unparseable sourcemaps correctly with prefixes and suffixes', function (cb) {
+	var stream = rev({
+		hashPre: 'pre.',
+		hashSfx: '.sfx'
+	});
+
+	stream.on('data', function (file) {
+		if (path.extname(file.path) === '.map') {
+			assert.equal(file.path, 'pastissada-pre.d41d8cd98f.sfx.css.map');
 			cb();
 		}
 	});

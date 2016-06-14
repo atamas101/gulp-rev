@@ -8,6 +8,10 @@ var revHash = require('rev-hash');
 var revPath = require('rev-path');
 var sortKeys = require('sort-keys');
 var modifyFilename = require('modify-filename');
+var cfg = {
+	defaultPrefix: '',
+	defaultSuffix: ''
+};
 
 function relPath(base, filePath) {
 	if (filePath.indexOf(base) !== 0) {
@@ -40,11 +44,19 @@ function getManifestFile(opts, cb) {
 	});
 }
 
-function transformFilename(file) {
+function transformFilename(file, opts) {
+	var pre = '';
+	var sfx = '';
+
+	if (typeof opts !== 'undefined') {
+		pre = (typeof opts.hashPre === 'string') ? opts.hashPre : cfg.defaultSuffix;
+		sfx = (typeof opts.hashSfx === 'string') ? opts.hashSfx : cfg.defaultPrefix;
+	}
+
 	// save the old path for later
 	file.revOrigPath = file.path;
 	file.revOrigBase = file.base;
-	file.revHash = revHash(file.contents);
+	file.revHash = pre + revHash(file.contents) + sfx;
 
 	file.path = modifyFilename(file.path, function (filename, extension) {
 		var extIndex = filename.indexOf('.');
@@ -57,9 +69,14 @@ function transformFilename(file) {
 	});
 }
 
-var plugin = function () {
+var plugin = function (opts) {
 	var sourcemaps = [];
 	var pathMap = {};
+
+	opts = objectAssign({
+		hashPre: cfg.defaultPrefix,
+		hashSfx: cfg.defaultSuffix
+	}, opts);
 
 	return through.obj(function (file, enc, cb) {
 		if (file.isNull()) {
@@ -80,7 +97,7 @@ var plugin = function () {
 		}
 
 		var oldPath = file.path;
-		transformFilename(file);
+		transformFilename(file, opts);
 		pathMap[oldPath] = file.revHash;
 
 		cb(null, file);
